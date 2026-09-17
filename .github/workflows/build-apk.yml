@@ -23,7 +23,7 @@ jobs:
       - name: Generate Android project
         run: flutter create --platforms=android --org com.lightspeed .
 
-      - name: Fetch V2Ray Box build helper
+      - name: Fetch V2Box build helper
         run: |
           git clone --depth 1 https://github.com/imanheidary/v2box.git /tmp/v2box
           mkdir -p scripts
@@ -34,8 +34,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y golang-go python3 python3-pip jq unzip zip
-          # Pin a libXray release whose nodep.CallResponse API matches v2ray_box.
-          # Do not build libXray main: its newer API removed CallResponse[T].
           ./scripts/build_android_libxray.sh --project-root "$GITHUB_WORKSPACE" --libxray-ref v26.3.27 --android-abis arm64-v8a,x86_64
 
       - name: Configure Android packaging
@@ -44,8 +42,10 @@ jobs:
           from pathlib import Path
           p = Path('android/app/build.gradle.kts')
           s = p.read_text()
-          s = s.replace('defaultConfig {', 'defaultConfig {\n        multiDexEnabled = true', 1)
-          s = s.replace('android {', 'android {\n    packaging {\n        jniLibs { useLegacyPackaging = true }\n    }', 1)
+          if 'multiDexEnabled = true' not in s:
+              s = s.replace('defaultConfig {', 'defaultConfig {\n        multiDexEnabled = true', 1)
+          if 'useLegacyPackaging = true' not in s:
+              s = s.replace('android {', 'android {\n    packaging {\n        jniLibs { useLegacyPackaging = true }\n    }', 1)
           p.write_text(s)
           PY
           mkdir -p android/app/libs
